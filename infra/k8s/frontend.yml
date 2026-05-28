@@ -1,0 +1,35 @@
+#DEPLOYMENT: configuraciones para que funcione.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: frontend-gamecatalog:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+---
+#SERVICE: levantamiento del contenedor y su orquestación.
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend #http://frontend:80
+spec:
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
+  type: NodePort #Expone el servicio fuera del cluster
