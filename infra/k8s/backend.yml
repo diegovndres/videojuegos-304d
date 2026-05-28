@@ -1,0 +1,41 @@
+#DEPLOYMENT: configuraciones para que funcione.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: backend-gamecatalog:latest
+          imagePullPolicy: Never #no intentar descargar la imagen desde Docker Hub
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://mysql:3306/gamecatalog
+            - name: SPRING_DATASOURCE_USERNAME
+              value: root
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: root
+---
+#SERVICE: levantamiento del contenedor y su orquestación.
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend #http://backend:8080
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP
