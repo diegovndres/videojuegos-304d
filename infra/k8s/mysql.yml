@@ -1,0 +1,41 @@
+#Archivo para trabajar con kubernetes:
+#Kubernet separa en: Deployment y Service:
+
+#DEPLOYMENT: configuraciones para que funcione.
+apiVersion: apps/v1 #nombre del cluster
+kind: Deployment #tipo de configuración
+metadata:
+  name: mysql
+spec: #aquí comienza la configuración
+  replicas: 1
+  selector: #nombre del Pod~Imagen
+    matchLabels:
+      app: mysql
+  template: #configuración de la imagen
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers: #lista de contenedores
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: root
+            - name: MYSQL_DATABASE
+              value: gamecatalog
+---
+#SERVICE: levantamiento del contenedor y su orquestación.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306 #puerto expuesto por el servicio.
+      targetPort: 3306 #puerto interno del contenedor.
+  type: ClusterIP #solo es accesible dentro del cluster.
