@@ -16,7 +16,7 @@ spec:
       containers:
         - name: backend
           image: backend-gamecatalog:latest
-          imagePullPolicy: Never #no intentar descargar la imagen desde Docker Hub
+          imagePullPolicy: Always #no intentar descargar la imagen desde Docker Hub
           ports:
             - containerPort: 8080
           env:

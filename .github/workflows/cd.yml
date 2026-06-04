@@ -1,0 +1,86 @@
+name: Despliegue en AWS con EKS
+on:
+  push:
+    branches:
+      - deploy
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+      CLUSTER_NAME: gamecatalog-cluster
+    steps:
+      - name: Checkout (clonar el repositorio en Actions)
+        uses: actions/checkout@v4
+      
+      - name: Configurar credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
+          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          aws-session-token: ${{secrets.AWS_SESSION_TOKEN}}
+          aws-region: ${{env.AWS_REGION}}
+      
+      - name: Login con ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Obtener el AWS Account Id
+        run: |
+          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+      
+      - name: Vamos a crear las URL de los ECR
+        run: |
+          echo "BACKEND_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/backend_gamecatalog" >> $GITHUB_ENV
+          echo "FRONTEND_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/frontend_gamecatalog" >> $GITHUB_ENV
+      
+      - name: Build backend
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $BACKEND_ECR:${GITHUB_SHA} \
+            ./backend \
+            --load
+      - name: Subir imagen del Backend al ECR
+        run: |
+          docker push $BACKEND_ECR:${GITHUB_SHA}
+      
+      - name: Build frontend
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $FRONTEND_ECR:${GITHUB_SHA} \
+            ./frontend \
+            --load
+      - name: Subir imagen del Frontend al ECR
+        run: |
+          docker push $FRONTEND_ECR:${GITHUB_SHA}
+      
+      - name: Instalación de Kubernetes
+        uses: azure/setup-kubectl@v4
+      
+      - name: Conectarse con EKS
+        run: |
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $CLUSTER_NAME
+      - name: Vamos a ejecutar el manifiesto de Kubernetes
+        run: |
+          kubectl apply -f infra/k8s/
+      
+      # Debemos actualizar el nombre de las imagenes de los manifiestos de k8s, por que hay nombre que no coinciden con los nombres de los repos de ECR
+      - name: Actualizar nombre de la imagen del Backend
+        run: |
+          kubectl set image deployment/backend \
+            backend=$BACKEND_ECR:${GITHUB_SHA}
+      - name: Actualizar nombre de la imagen del Frontend
+        run: |
+          kubectl set image deployment/frontend \
+            frontend=$FRONTEND_ECR:${GITHUB_SHA}
+      
+      #Esperar despliegue
+      - name: Esperar despliegue del backend
+        run: |
+          kubectl rollout status deployment/backend
+      - name: Esperar despliegue del frontend
+        run: |
+          kubectl rollout status deployment/frontend

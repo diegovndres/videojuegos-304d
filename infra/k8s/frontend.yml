@@ -16,7 +16,7 @@ spec:
       containers:
         - name: frontend
           image: frontend-gamecatalog:latest
-          imagePullPolicy: Never
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
 ---
@@ -32,4 +32,5 @@ spec:
     - port: 80
       targetPort: 80
       nodePort: 30080
-  type: NodePort #Expone el servicio fuera del cluster
+  #NodePort: Expone el servicio fuera del cluster
+  type: LoadBalancer #LoadBalancer: conexión es a través de un balanceador de carga.
